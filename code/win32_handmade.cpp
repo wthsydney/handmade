@@ -30,15 +30,24 @@ struct win32_offscreen_buffer
 global_variable bool Running;
 global_variable win32_offscreen_buffer GlobalBackBuffer;
 
-#define X_INPUT_GET_STATE(name) DWORD WINAPI name(DWORD dwUserIndex, XINPUT_STATE* pState);
-#define X_INPUT_SET_STATE(name) DWORD WINAPI name(DWORD dwUserIndex, XINPUT_VIBRATION* pVibration);
-
+#define X_INPUT_GET_STATE(name) DWORD WINAPI name(DWORD dwUserIndex, XINPUT_STATE *pState)
+#define X_INPUT_SET_STATE(name) DWORD WINAPI name(DWORD dwUserIndex, XINPUT_VIBRATION *pVibration)
 typedef X_INPUT_GET_STATE(x_input_get_state);
 typedef X_INPUT_SET_STATE(x_input_set_state);
-typedef DWORD WINAPI x_input_get_state(DWORD dwUserIndex, XINPUT_STATE* pState);
-typedef DWORD WINAPI x_input_set_state(DWORD dwUserIndex, XINPUT_VIBRATION* pVibration);
-global_variable x_input_get_state *XInputGetState_;
-global_variable x_input_set_state *XInputSetState_;
+
+X_INPUT_GET_STATE(XInputGetStateStub)
+{
+    return(0);
+}
+
+X_INPUT_SET_STATE(XInputSetStateStub)
+{
+    return(0);
+}
+
+global_variable x_input_get_state *XInputGetState_ = XInputGetStateStub;
+global_variable x_input_set_state *XInputSetState_ = XInputSetStateStub;
+
 #define XInputGetState XInputGetState_
 #define XinputSetState XinputSetState_
 

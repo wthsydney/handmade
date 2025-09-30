@@ -7,10 +7,10 @@
       "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:code\\win32_handmade.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{79EE7F5B-B3DE-DBEE-F5EA-6C9E00CDD170}|..\\Users\\Patryk\\AppData\\Roaming\\Microsoft\\VisualStudio\\17.0_cf9bbf6c\\SingleFileISense\\_sfi_3f54e8fb-cfed-4e6e-bc0e-a22208b20619_.vcxproj|C:\\PROGRAM FILES (X86)\\WINDOWS KITS\\10\\INCLUDE\\10.0.26100.0\\UM\\XINPUT.H||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+      "AbsoluteMoniker": "D:0:0:{00000000-0000-0000-0000-000000000000}|\u003CSolution\u003E|win32_handmade||{04B8AB82-A572-4FEF-95CE-5222444B6B64}|"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{00000000-0000-0000-0000-000000000000}|\u003CSolution\u003E|win32_handmade||{04B8AB82-A572-4FEF-95CE-5222444B6B64}|"
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.26100.0\\um\\Xinput.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
     }
   ],
   "DocumentGroupContainers": [
@@ -28,7 +28,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 2,
               "Title": "Xinput.h",
               "DocumentMoniker": "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.26100.0\\um\\Xinput.h",
               "RelativeDocumentMoniker": "..\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.26100.0\\um\\Xinput.h",
@@ -36,8 +36,7 @@
               "RelativeToolTip": "..\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.26100.0\\um\\Xinput.h",
               "ViewState": "AgIAAPAAAAAAAAAAAAAAAAEBAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
-              "WhenOpened": "2025-09-24T15:07:40.368Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-09-24T15:07:40.368Z"
             },
             {
               "$type": "Document",
@@ -47,14 +46,14 @@
               "RelativeDocumentMoniker": "code\\win32_handmade.cpp",
               "ToolTip": "C:\\handmade\\code\\win32_handmade.cpp",
               "RelativeToolTip": "code\\win32_handmade.cpp",
-              "ViewState": "AgIAAOYAAAAAAAAAAAAnwA8BAAAAAAAAAAAAAA==",
+              "ViewState": "AgIAABIAAAAAAAAAAAAkwCgAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
               "WhenOpened": "2025-07-09T16:42:04.502Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 1,
               "Title": "win32_handmade",
               "DocumentMoniker": "C:\\handmade\\build\\win32_handmade.exe",
               "RelativeDocumentMoniker": "build\\win32_handmade.exe",
