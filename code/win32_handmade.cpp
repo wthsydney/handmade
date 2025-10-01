@@ -38,7 +38,7 @@ global_variable win32_offscreen_buffer GlobalBackBuffer;
 typedef X_INPUT_GET_STATE(x_input_get_state);
 X_INPUT_GET_STATE(XInputGetStateStub)
 {
-    return(0);
+    return(ERROR_DEVICE_NOT_CONNECTED);
 }
 global_variable x_input_get_state *XInputGetState_ = XInputGetStateStub;
 #define XInputGetState XInputGetState_
@@ -47,7 +47,7 @@ global_variable x_input_get_state *XInputGetState_ = XInputGetStateStub;
 typedef X_INPUT_SET_STATE(x_input_set_state);
 X_INPUT_SET_STATE(XInputSetStateStub)
 {
-    return(0);
+    return(ERROR_DEVICE_NOT_CONNECTED);
 }
 global_variable x_input_set_state *XInputSetState_ = XInputSetStateStub;
 #define XInputSetState XInputSetState_
@@ -194,20 +194,33 @@ Win32MainWindowCallback (HWND    Window,
 
 	if (WasDown != IsDown)
 	{
-	    	if (VKCode == VK_ESCAPE)
+	    if (VKCode == VK_ESCAPE)
+	    {
+		if(IsDown)
+		{
+		    OutputDebugStringA("IsDown");		
+		}
+		
+		if(WasDown)
+		{
+		    OutputDebugStringA("WasDown");
+		}
+		OutputDebugStringA("\n");
+
+	    }
+	    else if(VKCode == VK_SPACE)
+	    {
+		
+	    }
+	}
+
+	bool AltKeyWasDown = ((lParam & (1 << 29)) != 0);
+	if((VKCode == VK_F4) && AltKeyWasDown)
 	{
-	    if(IsDown)
-	    {
-		OutputDebugStringA("IsDown");		
-	    }
-	    if(WasDown)
-	    {
-		OutputDebugStringA("WasDown");
-	    }
-	    OutputDebugStringA("\n");
+	    Running = false;
 	}
-	} break;
-	}
+
+    } break;
 
 
     case WM_PAINT:
