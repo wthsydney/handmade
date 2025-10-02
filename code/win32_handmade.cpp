@@ -214,7 +214,11 @@ Win32MainWindowCallback (HWND    Window,
 	    }
 	}
 
-	bool AltKeyWasDown = ((lParam & (1 << 29)) != 0);
+	// NOTE(patryk): Okay so Casey reccommends that you
+	// don't use "!= 0" because of C++ semantics and in
+	// result it just wastes time.
+	// bool AltKeyWasDown = ((lParam & (1 << 29)) != 0);
+	bool AltKeyWasDown = (lParam & (1 << 29));
 	if((VKCode == VK_F4) && AltKeyWasDown)
 	{
 	    Running = false;
@@ -300,8 +304,7 @@ WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, PSTR CommandLine, int ShowCo
                     ControllerIndex++)
                 {
                     XINPUT_STATE ControllerState;
-                    if(XInputGetState(ControllerIndex, &ControllerState)
-                       == ERROR_SUCCESS)
+                    if(XInputGetState(ControllerIndex, &ControllerState) == ERROR_SUCCESS)
                     {
                         // Controller is plugged in
                         
