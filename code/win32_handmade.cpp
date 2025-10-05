@@ -6,7 +6,7 @@
 #define internal static 
 #define local_persist static
 #define global_variable static
-	
+
 typedef int8_t int8;
 typedef int16_t int16;
 typedef int32_t int32;
@@ -30,6 +30,7 @@ struct win32_offscreen_buffer
 // TODO(casey): This is a global for now
 global_variable bool Running;
 global_variable win32_offscreen_buffer GlobalBackBuffer;
+global_variable LPDIRECTSOUNDBUFFER GlobalSecondaryBuffer;
 
 // NOTE(Patryk): Okay so this code is for making sure that people don't rely
 // on incorrect versions of specific libraries. In this case XInput. Normally
@@ -86,13 +87,13 @@ Win32InitSound(HWND Window, int32 SamplesPerSecond, int32 BufferSize)
 {
     // Load the library
     HMODULE DSoundLibrary = LoadLibraryA("dsound.dll");
-
+    
     if(DSoundLibrary)
     {
 		// Get a DirectSound object
 		direct_sound_create *DirectSoundCreate = (direct_sound_create *)
 			GetProcAddress(DSoundLibrary, "DirectSoundCreate");
-
+        
 		LPDIRECTSOUND DirectSound;
 		if(DirectSoundCreate && SUCCEEDED(DirectSoundCreate(0, &DirectSound, 0)))
 		{
@@ -110,12 +111,12 @@ Win32InitSound(HWND Window, int32 SamplesPerSecond, int32 BufferSize)
 				DSBUFFERDESC BufferDescription = {};
 				BufferDescription.dwSize = sizeof(BufferDescription);
 				BufferDescription.dwFlags = DSBCAPS_PRIMARYBUFFER;
-			
+                
 				LPDIRECTSOUNDBUFFER PrimaryBuffer;
 				if(SUCCEEDED(DirectSound->CreateSoundBuffer(&BufferDescription, &PrimaryBuffer, 0)))
 				{
-			    
-			    	if(SUCCEEDED(PrimaryBuffer->SetFormat(&WaveFormat)))
+                    HRESULT Error = PrimaryBuffer->SetFormat(&WaveFormat);
+			    	if(SUCCEEDED(Error))
 			    	{
 						// We have finally set the format
 						OutputDebugStringA("Primary buffer format was set.\n");
@@ -128,28 +129,28 @@ Win32InitSound(HWND Window, int32 SamplesPerSecond, int32 BufferSize)
 		    }
 		    else
 		    {
-			// TODO: Diagnostic
+                // TODO: Diagnostic
 		    }
-		   
+            
 		    // Create a secondary buffer
 		    DSBUFFERDESC BufferDescription = {};
 		    BufferDescription.dwSize = sizeof(BufferDescription);
 		    BufferDescription.dwFlags = 0;
 		    BufferDescription.dwBufferBytes = BufferSize;
 		    BufferDescription.lpwfxFormat = &WaveFormat;
-		    LPDIRECTSOUNDBUFFER SecondaryBuffer;
-
-		    if(SUCCEEDED(DirectSound->CreateSoundBuffer(&BufferDescription, &SecondaryBuffer, 0)))
+            
+            HRESULT Error = DirectSound->CreateSoundBuffer(&BufferDescription, &GlobalSecondaryBuffer, 0);
+		    if(SUCCEEDED(Error))
 		    {
 				OutputDebugStringA("Secondary buffer created successfully.\n");
 		    }
-
+            
 		}
 		else
 		{
 			// TODO: Diagnostic
 		}
-			
+        
     }
     else
     {
@@ -231,7 +232,7 @@ Win32ResizeDIBSection(win32_offscreen_buffer *Buffer, int Width, int Height)
 
 internal void
 Win32DisplayBufferInWindow(win32_offscreen_buffer *Buffer,
-			   HDC DeviceContext, int WindowWidth, int WindowHeight)
+                           HDC DeviceContext, int WindowWidth, int WindowHeight)
 {
     // TODO(casey): Aspect ratio correction
     StretchDIBits(DeviceContext,
@@ -263,19 +264,19 @@ Win32MainWindowCallback (HWND    Window,
 			Running = false;
 			OutputDebugStringA("WM_DESTROY\n");
 	    } break;
-	        
+        
 	    case WM_CLOSE:
 	    {
 			// TODO(casey): Handle this with a message to the user?
 			Running = false;
 			OutputDebugStringA("WM_CLOSE\n");
 	    } break;
-	        
+        
 	    case WM_ACTIVATEAPP:
 	    {
 			OutputDebugStringA("WM_ACTIVATEAPP\n");
 	    } break;
-
+        
 	    case WM_SYSKEYDOWN:
 	    case WM_SYSKEYUP:
 	    case WM_KEYDOWN:
@@ -285,7 +286,7 @@ Win32MainWindowCallback (HWND    Window,
 			uint32 VKCode = wParam;
 			bool WasDown = ((lParam & (1 << 30)) != 0);
 			bool IsDown = ((lParam & (1 << 31)) == 0);
-
+            
 			if (WasDown != IsDown)
 			{
 			    if (VKCode == VK_ESCAPE)
@@ -294,20 +295,20 @@ Win32MainWindowCallback (HWND    Window,
 					{
 				    	OutputDebugStringA("IsDown");
 					}
-				
+                    
 					if(WasDown)
 					{
 					    OutputDebugStringA("WasDown");
 					}
 					OutputDebugStringA("\n");
-
+                    
 			    }
 			    else if(VKCode == VK_SPACE)
 			    {
-				
+                    
 			    }
 			}
-
+            
 			// NOTE(patryk): Okay so Casey reccommends that you
 			// don't use "!= 0" because of C++ semantics and in
 			// result it just wastes time.
@@ -317,20 +318,20 @@ Win32MainWindowCallback (HWND    Window,
 			{
 			    Running = false;
 			}
-
+            
 	    } break;
-
-
+        
+        
 	    case WM_PAINT:
 	    {
 			PAINTSTRUCT Paint;
 			HDC DeviceContext = BeginPaint(Window, &Paint);
 			win32_window_dimension Dimension = Win32GetWindowDimension(Window);
 			Win32DisplayBufferInWindow(&GlobalBackBuffer, DeviceContext,
-						   Dimension.Width, Dimension.Height);
+                                       Dimension.Width, Dimension.Height);
 			EndPaint(Window, &Paint);
 	    }
-	        
+        
 	    default:
 	    {
 			//      OutputDebugStringA("default\n");
@@ -374,9 +375,9 @@ WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, PSTR CommandLine, int ShowCo
         {
             int XOffset = 0;
             int YOffset = 0;
-
+            
 	    	Win32InitSound(Window, 48000, 4800*sizeof(int16)*2);
-	    
+            
             Running = true;
             while(Running)
             {
@@ -421,7 +422,7 @@ WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, PSTR CommandLine, int ShowCo
                         
                         int16 StickX = Pad->sThumbLX;
                         int16 StickY = Pad->sThumbLY;
-
+                        
 						if(AButton)
 						{
 						    YOffset++;
@@ -433,11 +434,11 @@ WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, PSTR CommandLine, int ShowCo
                         // Controller is not available
                     }
                 }
-
+                
 				// If I want any vibration
 				// XINPUT_VIBRATION Vibration;
 				// XInputSetState(0, &Vibration);
-		
+                
                 RenderCoolGradient(&GlobalBackBuffer, XOffset, YOffset);
                 HDC DeviceContext = GetDC(Window);
                 
