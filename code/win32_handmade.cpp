@@ -1,3 +1,4 @@
+#include <debugapi.h>
 #include <windows.h>
 #include <stdint.h>
 #include <xinput.h>
@@ -90,11 +91,11 @@ Win32InitSound(HWND Window, int32 SamplesPerSecond, int32 BufferSize)
 
     if(DSoundLibrary)
     {
-	// Get a DirectSound object
-	direct_sound_create *DirectSoundCreate = (direct_sound_create *)
-	    GetProcAddress(DSoundLibrary, "DirectSoundCreate");
+   	// Get a DirectSound object
+   	direct_sound_create *DirectSoundCreate = (direct_sound_create *)
+   	    GetProcAddress(DSoundLibrary, "DirectSoundCreate");1
 
-	LPDIRECTSOUND DirectSound;
+								   LPDIRECTSOUND DirectSound;
 	if(DirectSoundCreate && SUCCEEDED(DirectSoundCreate(0, &DirectSound, 0)))
 	{
 	    WAVEFORMATEX WaveFormat = {};
@@ -108,28 +109,28 @@ Win32InitSound(HWND Window, int32 SamplesPerSecond, int32 BufferSize)
 
 	    if(SUCCEEDED(DirectSound->SetCooperativeLevel(Window, DSSCL_PRIORITY)))
 	    {
-		DSBUFFERDESC BufferDescription = {};
-		BufferDescription.dwSize = sizeof(BufferDescription);
-		BufferDescription.dwFlags = DSBCAPS_PRIMARYBUFFER;
+      		DSBUFFERDESC BufferDescription = {};
+      		BufferDescription.dwSize = sizeof(BufferDescription);
+      		BufferDescription.dwFlags = DSBCAPS_PRIMARYBUFFER;
 
-		LPDIRECTSOUNDBUFFER PrimaryBuffer;
-		if(SUCCEEDED(DirectSound->CreateSoundBuffer(&BufferDescription, &PrimaryBuffer, 0)))
-		{
-                    HRESULT Error = PrimaryBuffer->SetFormat(&WaveFormat);
-		    if(SUCCEEDED(Error))
-		    {
+      		LPDIRECTSOUNDBUFFER PrimaryBuffer;
+      		if(SUCCEEDED(DirectSound->CreateSoundBuffer(&BufferDescription, &PrimaryBuffer, 0)))
+      		{
+		    HRESULT Error = PrimaryBuffer->SetFormat(&WaveFormat);
+      		    if(SUCCEEDED(Error))
+      		    {
 			// We have finally set the format
 			OutputDebugStringA("Primary buffer format was set.\n");
-		    }
-		    else
-		    {
+      		    }
+      		    else
+      		    {
 			// TODO: Diagnostic
-		    }
+      		    }
 		}
 	    }
 	    else
 	    {
-                // TODO: Diagnostic
+		// TODO: Diagnostic
 	    }
 
 	    // Create a secondary buffer
@@ -139,7 +140,7 @@ Win32InitSound(HWND Window, int32 SamplesPerSecond, int32 BufferSize)
 	    BufferDescription.dwBufferBytes = BufferSize;
 	    BufferDescription.lpwfxFormat = &WaveFormat;
 
-            HRESULT Error = DirectSound->CreateSoundBuffer(&BufferDescription, &GlobalSecondaryBuffer, 0);
+	    HRESULT Error = DirectSound->CreateSoundBuffer(&BufferDescription, &GlobalSecondaryBuffer, 0);
 	    if(SUCCEEDED(Error))
 	    {
 		OutputDebugStringA("Secondary buffer created successfully.\n");
@@ -370,7 +371,7 @@ WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, PSTR CommandLine, int ShowCo
 	     0,
 	     Instance,
 	     0);
-			
+
 	if(Window)
         {
 	    int SamplesPerSecond = 48000;
@@ -462,7 +463,7 @@ WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, PSTR CommandLine, int ShowCo
 							     &Region2, &Region2Size,
 							     0)))
 		    {
-			
+
 			int16 *SampleOut = (int16 *)Region1;
 			DWORD Region1SampleCount = Region1Size/BytesPerSample;
 			DWORD Region2SampleCount = Region2Size/BytesPerSample;
@@ -475,7 +476,6 @@ WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, PSTR CommandLine, int ShowCo
 			    }
 			    int16 SampleValue = ((SquareWaveCounter > SquareWavePeriod/2)) ?
 				16000 : -16000;
-			    *SampleOut++ = SampleValue;
 			    *SampleOut++ = SampleValue;
 			    SquareWaveCounter++;
 			}
@@ -495,7 +495,7 @@ WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, PSTR CommandLine, int ShowCo
 		    }
 
 		}
-		    
+
 
                 HDC DeviceContext = GetDC(Window);
 
