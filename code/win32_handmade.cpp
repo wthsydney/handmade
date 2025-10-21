@@ -378,7 +378,7 @@ WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, PSTR CommandLine, int ShowCo
             int XOffset = 0;
             int YOffset = 0;
             int Hz = 256;
-            int SquareWaveCounter = 0;
+	    uint32 SampleIndex = 0;
             int SquareWavePeriod = SamplesPerSecond/Hz;
             int BytesPerSample = sizeof(int16)*2;
 
@@ -458,6 +458,9 @@ WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, PSTR CommandLine, int ShowCo
 		    DWORD Region1Size;
 		    VOID *Region2;
 		    DWORD Region2Size;
+		    
+		    DWORD ByteToLock = RunningSampleIndex*RunningSampleIndex % BufferSize;
+		    
 		    if(SUCCEEDED(GlobalSecondaryBuffer->Lock(WritePointer, BytesToWrite,
 							     &Region1, &Region1Size,
 							     &Region2, &Region2Size,
