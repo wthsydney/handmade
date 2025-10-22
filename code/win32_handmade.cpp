@@ -118,12 +118,12 @@ Win32InitSound(HWND Window, int32 SamplesPerSecond, int32 BufferSize)
                     HRESULT Error = PrimaryBuffer->SetFormat(&WaveFormat);
               		    if(SUCCEEDED(Error))
               		    {
-                        // We have finally set the format
-                        OutputDebugStringA("Primary buffer format was set.\n");
+                            // We have finally set the format
+                            OutputDebugStringA("Primary buffer format was set.\n");
               		    }
               		    else
               		    {
-                        // TODO: Diagnostic
+                            // TODO: Diagnostic
               		    }
                 }
             }
@@ -152,10 +152,10 @@ Win32InitSound(HWND Window, int32 SamplesPerSecond, int32 BufferSize)
         }
 
     }
-        else
-        {
-            // TODO: Diagnostic
-        }
+    else
+    {
+        // TODO: Diagnostic
+    }
 }
 
 struct win32_window_dimension
@@ -373,7 +373,7 @@ WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, PSTR CommandLine, int ShowCo
 
         if(Window)
         {
-            HDC DeviceContext = GetDC(Window);
+
 
             // NOTE: Graphics test
             int XOffset = 0;
@@ -388,17 +388,15 @@ WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, PSTR CommandLine, int ShowCo
             int BytesPerSample = sizeof(int16)*2;
             int SecondaryBufferSize = SamplesPerSecond*BytesPerSample;
 
-            Win32InitSound(Window, SamplesPerSecond, SecondaryBufferSize);
-            if (GlobalSecondaryBuffer)
-            {
-                GlobalSecondaryBuffer->Play(0, 0, DSBPLAY_LOOPING);
-            }
-            else
-            {
-                OutputDebugStringA("Warning: GlobalSecondaryBuffer is NULL — sound disabled\n");
-            }
-
-            ReleaseDC(Window, DeviceContext);
+            // Win32InitSound(Window, SamplesPerSecond, SecondaryBufferSize);
+            // if(GlobalSecondaryBuffer)
+            // {
+            //     GlobalSecondaryBuffer->Play(0, 0, DSBPLAY_LOOPING);
+            // }
+            // else
+            // {
+            //     OutputDebugStringA("Warning: GlobalSecondaryBuffer is NULL — sound disabled\n");
+            // }
 
             Running = true;
             while(Running)
@@ -463,67 +461,68 @@ WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, PSTR CommandLine, int ShowCo
 
                 RenderCoolGradient(&GlobalBackBuffer, XOffset, YOffset);
 
-                DWORD PlayCursor;
-                DWORD WriteCursor;
-                // NOTE: I think Casey is doing lots of placeholder code with variables
-                // that don't exist, however they're named after things that should be there.
-                //
-                // *later* Okay he calls it "compression oriented programming"
-                if(SUCCEEDED(GlobalSecondaryBuffer->GetCurrentPosition(&PlayCursor, &WriteCursor)))
-                {
-                    DWORD ByteToLock = RunningSampleIndex*BytesPerSample % SecondaryBufferSize;
-                    DWORD BytesToWrite;
-                    if(ByteToLock > PlayCursor)
-                    {
-                        BytesToWrite = SecondaryBufferSize - ByteToLock;
-                        BytesToWrite += PlayCursor;
-                    }
-                    else
-                    {
-                        BytesToWrite = PlayCursor - ByteToLock;
-                    }
+                // DWORD PlayCursor;
+                // DWORD WriteCursor;
+                // // NOTE: I think Casey is doing lots of placeholder code with variables
+                // // that don't exist, however they're named after things that should be there.
+                // //
+                // // *later* Okay he calls it "compression oriented programming"
+                // if(SUCCEEDED(GlobalSecondaryBuffer->GetCurrentPosition(&PlayCursor, &WriteCursor)))
+                // {
+                //     DWORD ByteToLock = RunningSampleIndex*BytesPerSample % SecondaryBufferSize;
+                //     DWORD BytesToWrite;
+                //     if(ByteToLock > PlayCursor)
+                //     {
+                //         BytesToWrite = SecondaryBufferSize - ByteToLock;
+                //         BytesToWrite += PlayCursor;
+                //     }
+                //     else
+                //     {
+                //         BytesToWrite = PlayCursor - ByteToLock;
+                //     }
 
-                    VOID *Region1;
-                    DWORD Region1Size;
-                    VOID *Region2;
-                    DWORD Region2Size;
+                //     VOID *Region1;
+                //     DWORD Region1Size;
+                //     VOID *Region2;
+                //     DWORD Region2Size;
 
-                    if(SUCCEEDED(GlobalSecondaryBuffer->Lock(
-                        ByteToLock, BytesToWrite,
-                        &Region1, &Region1Size,
-                        &Region2, &Region2Size,
-                        0)))
-                    {
+                //     if(SUCCEEDED(GlobalSecondaryBuffer->Lock(
+                //         ByteToLock, BytesToWrite,
+                //         &Region1, &Region1Size,
+                //         &Region2, &Region2Size,
+                //         0)))
+                //     {
 
-                        DWORD Region1SampleCount = Region1Size/BytesPerSample;
-                        int16 *SampleOut = (int16 *)Region1;
-                        for(DWORD SampleIndex = 0; SampleIndex < Region1SampleCount;
-                            SampleIndex++)
-                        {
-                            int16 SampleValue = ((RunningSampleIndex++ / HalfSquareWavePeriod) % 2) ?
-                            16000 : -16000;
-                            *SampleOut++ = SampleValue;
-                            *SampleOut++ = SampleValue;
-                        }
+                //         DWORD Region1SampleCount = Region1Size/BytesPerSample;
+                //         int16 *SampleOut = (int16 *)Region1;
+                //         for(DWORD SampleIndex = 0; SampleIndex < Region1SampleCount;
+                //             SampleIndex++)
+                //         {
+                //             int16 SampleValue = ((RunningSampleIndex++ / HalfSquareWavePeriod) % 2) ?
+                //             16000 : -16000;
+                //             *SampleOut++ = SampleValue;
+                //             *SampleOut++ = SampleValue;
+                //         }
 
-                        DWORD Region2SampleCount = Region2Size/BytesPerSample;
-                        SampleOut = (int16 *)Region2;
-                        for(DWORD SampleIndex = 0; SampleIndex < Region2SampleCount;
-                            SampleIndex++)
-                        {
-                            int16 SampleValue = ((RunningSampleIndex++ > HalfSquareWavePeriod) % 2)
-                            ? 16000 : -16000;
-                            *SampleOut++ = SampleValue;
-                            *SampleOut++ = SampleValue;
-                        }
-                    }
+                //         DWORD Region2SampleCount = Region2Size/BytesPerSample;
+                //         SampleOut = (int16 *)Region2;
+                //         for(DWORD SampleIndex = 0; SampleIndex < Region2SampleCount;
+                //             SampleIndex++)
+                //         {
+                //             int16 SampleValue = ((RunningSampleIndex++ > HalfSquareWavePeriod) % 2)
+                //             ? 16000 : -16000;
+                //             *SampleOut++ = SampleValue;
+                //             *SampleOut++ = SampleValue;
+                //         }
+                //     }
 
-                }
+                // }
 
+                HDC DeviceContext = GetDC(Window);
                 win32_window_dimension Dimension = Win32GetWindowDimension(Window);
                 Win32DisplayBufferInWindow(&GlobalBackBuffer, DeviceContext,
                     Dimension.Width, Dimension.Height);
-
+                ReleaseDC(Window, DeviceContext);
 
                 XOffset++;
             }
