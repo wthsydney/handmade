@@ -69,20 +69,16 @@ Win32LoadXInput(void)
         // TODO(casey): Diagnostic
         XInputLibrary = LoadLibraryA("xinput1_3.dll");
     }
+
     if(XInputLibrary)
     {
         XInputGetState = (x_input_get_state *)GetProcAddress(XInputLibrary, "XInputGetState");
-    }
-    if(!XInputGetState)
-    {
-        XInputGetState = XInputGetStateStub;
+        if(!XInputSetState) XInputSetState = XInputSetStateStub;
+
+        XInputSetState = (x_input_set_state *)GetProcAddress(XInputLibrary, "XInputSetState");
+        if(!XInputGetState) XInputGetState = XInputGetStateStub;
     }
 
-    XInputSetState = (x_input_set_state *)GetProcAddress(XInputLibrary, "XInputSetState");
-    if(!XInputSetState)
-    {
-        XInputSetState = XInputSetStateStub;
-    }
     else
     {
         // TODO: Diagnostic
@@ -115,23 +111,23 @@ Win32InitSound(HWND Window, int32 SamplesPerSecond, int32 BufferSize)
 
             if(SUCCEEDED(DirectSound->SetCooperativeLevel(Window, DSSCL_PRIORITY)))
             {
-              		DSBUFFERDESC BufferDescription = {};
-              		BufferDescription.dwSize = sizeof(BufferDescription);
-              		BufferDescription.dwFlags = DSBCAPS_PRIMARYBUFFER;
+                DSBUFFERDESC BufferDescription = {};
+                BufferDescription.dwSize = sizeof(BufferDescription);
+                BufferDescription.dwFlags = DSBCAPS_PRIMARYBUFFER;
 
-              		LPDIRECTSOUNDBUFFER PrimaryBuffer;
-              		if(SUCCEEDED(DirectSound->CreateSoundBuffer(&BufferDescription, &PrimaryBuffer, 0)))
-              		{
+                LPDIRECTSOUNDBUFFER PrimaryBuffer;
+                if(SUCCEEDED(DirectSound->CreateSoundBuffer(&BufferDescription, &PrimaryBuffer, 0)))
+                {
                     HRESULT Error = PrimaryBuffer->SetFormat(&WaveFormat);
-              		    if(SUCCEEDED(Error))
-              		    {
-                            // We have finally set the format
-                            OutputDebugStringA("Primary buffer format was set.\n");
-              		    }
-              		    else
-              		    {
-                            // TODO: Diagnostic
-              		    }
+              		if(SUCCEEDED(Error))
+              		{
+                        // We have finally set the format
+                        OutputDebugStringA("Primary buffer format was set.\n");
+              		}
+              		else
+              		{
+                        OutputDebugStringA("Primary buffer format wasn't set.\n");
+                    }
                 }
             }
             else
@@ -388,6 +384,7 @@ WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, PSTR CommandLine, int ShowCo
             // NOTE: Sound test
             int SamplesPerSecond = 48000;
             int ToneHz = 256;
+            int16 ToneVolume = 3000;
             uint32 RunningSampleIndex = 0;
             int SquareWavePeriod = SamplesPerSecond/ToneHz;
             int HalfSquareWavePeriod = SquareWavePeriod / 2;
@@ -400,7 +397,6 @@ WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, PSTR CommandLine, int ShowCo
             Running = true;
             while(Running)
             {
-
                 MSG Message;
                 while(PeekMessageA(&Message, 0, 0, 0, PM_REMOVE))
                 {
@@ -411,7 +407,6 @@ WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, PSTR CommandLine, int ShowCo
 
                     TranslateMessage(&Message);
                     DispatchMessage(&Message);
-
                 }
 
                 // TODO: Should we poll this more frequently
@@ -442,6 +437,7 @@ WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, PSTR CommandLine, int ShowCo
                         int16 StickX = Pad->sThumbLX;
                         int16 StickY = Pad->sThumbLY;
 
+                        // NOTE(Patryk): This is just for fun, remove it later
                         if(AButton)
                         {
                             YOffset++;
@@ -498,8 +494,8 @@ WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, PSTR CommandLine, int ShowCo
                         for(DWORD SampleIndex = 0; SampleIndex < Region1SampleCount;
                             SampleIndex++)
                         {
-                            int16 SampleValue = ((RunningSampleIndex++ % HalfSquareWavePeriod) % 2) ?
-                            16000 : -16000;
+                            int16 SampleValue = ((RunningSampleIndex++ % HalfSquareWavePeriod) % 2)
+                            ? ToneVolume : -ToneVolume;
                             *SampleOut++ = SampleValue;
                             *SampleOut++ = SampleValue;
                         }
@@ -510,12 +506,13 @@ WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, PSTR CommandLine, int ShowCo
                             SampleIndex++)
                         {
                             int16 SampleValue = ((RunningSampleIndex++ > HalfSquareWavePeriod) % 2)
-                            ? 16000 : -16000;
+                            ? ToneVolume : -ToneVolume;
                             *SampleOut++ = SampleValue;
                             *SampleOut++ = SampleValue;
                         }
-                    }
 
+                        GlobalSecondaryBuffer->Unlock(Region1, Region1Size, Region2, Region2Size);
+                    }
                 }
 
                 if(!SoundIsPlaying)
