@@ -11,6 +11,7 @@ typedef int8_t int8;
 typedef int16_t int16;
 typedef int32_t int32;
 typedef int64_t int64;
+typedef int32 bool32;
 
 typedef uint8_t uint8;
 typedef uint16_t uint16;
@@ -19,6 +20,7 @@ typedef uint64_t uint64;
 
 struct win32_offscreen_buffer
 {
+    // NOTE(casey): Pixels are alwasy 32-bits wide, Memory Order BB GG RR XX
     BITMAPINFO Info;
     void *Memory;
     int Width;
@@ -55,13 +57,18 @@ global_variable x_input_set_state *XInputSetState_ = XInputSetStateStub;
 #define XInputSetState XInputSetState_
 
 // NOTE(Patryk): We are doing the same thing for DirectSound as we did for XInput
-#define DIRECT_SOUND_CREATE(name) HRESULT WINAPI name(LPCGUID pcGuidDevice, LPDIRECTSOUND *ppDS, LPUNKNOWN pUnkOuter);
+#define DIRECT_SOUND_CREATE(name) HRESULT WINAPI name(LPCGUID pcGuidDevice, LPDIRECTSOUND *ppDS, LPUNKNOWN pUnkOuter)
 typedef DIRECT_SOUND_CREATE(direct_sound_create);
 
 internal void
 Win32LoadXInput(void)
 {
     HMODULE XInputLibrary = LoadLibraryA("xinput1_4.dll");
+    if(!XInputLibrary)
+    {
+        // TODO(casey): Diagnostic
+        XInputLibrary = LoadLibraryA("xinput1_3.dll");
+    }
     if(XInputLibrary)
     {
         XInputGetState = (x_input_get_state *)GetProcAddress(XInputLibrary, "XInputGetState");
@@ -101,9 +108,9 @@ Win32InitSound(HWND Window, int32 SamplesPerSecond, int32 BufferSize)
             WaveFormat.wFormatTag = WAVE_FORMAT_PCM;
             WaveFormat.nChannels = 2;
             WaveFormat.nSamplesPerSec = SamplesPerSecond;
-            WaveFormat.nAvgBytesPerSec = WaveFormat.nSamplesPerSec*WaveFormat.nBlockAlign;
             WaveFormat.wBitsPerSample = 16;
             WaveFormat.nBlockAlign = (WaveFormat.nChannels*WaveFormat.wBitsPerSample)/8;
+            WaveFormat.nAvgBytesPerSec = WaveFormat.nSamplesPerSec*WaveFormat.nBlockAlign;
             WaveFormat.cbSize = 0;
 
             if(SUCCEEDED(DirectSound->SetCooperativeLevel(Window, DSSCL_PRIORITY)))
@@ -174,7 +181,7 @@ Win32GetWindowDimension(HWND Window)
     Result.Width = ClientRect.right - ClientRect.left;
     Result.Height = ClientRect.bottom - ClientRect.top;
 
-    return Result;
+    return(Result);
 }
 
 internal void
@@ -224,8 +231,7 @@ Win32ResizeDIBSection(win32_offscreen_buffer *Buffer, int Width, int Height)
     Buffer->Info.bmiHeader.biCompression = BI_RGB;
 
     int BitmapMemorySize = (Buffer->Width*Buffer->Height)*Buffer->BytesPerPixel;
-    Buffer->Memory = VirtualAlloc(0, BitmapMemorySize, MEM_COMMIT, PAGE_READWRITE);
-
+    Buffer->Memory = VirtualAlloc(0, BitmapMemorySize, MEM_RESERVE|MEM_COMMIT, PAGE_READWRITE);
     Buffer->Pitch = Width*Buffer->BytesPerPixel;
 
 }
@@ -373,7 +379,7 @@ WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, PSTR CommandLine, int ShowCo
 
         if(Window)
         {
-
+            HDC DeviceContext = GetDC(Window);
 
             // NOTE: Graphics test
             int XOffset = 0;
@@ -388,15 +394,8 @@ WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, PSTR CommandLine, int ShowCo
             int BytesPerSample = sizeof(int16)*2;
             int SecondaryBufferSize = SamplesPerSecond*BytesPerSample;
 
-            // Win32InitSound(Window, SamplesPerSecond, SecondaryBufferSize);
-            // if(GlobalSecondaryBuffer)
-            // {
-            //     GlobalSecondaryBuffer->Play(0, 0, DSBPLAY_LOOPING);
-            // }
-            // else
-            // {
-            //     OutputDebugStringA("Warning: GlobalSecondaryBuffer is NULL — sound disabled\n");
-            // }
+            Win32InitSound(Window, SamplesPerSecond, SecondaryBufferSize);
+            bool32 SoundIsPlaying = false;
 
             Running = true;
             while(Running)
@@ -461,68 +460,73 @@ WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, PSTR CommandLine, int ShowCo
 
                 RenderCoolGradient(&GlobalBackBuffer, XOffset, YOffset);
 
-                // DWORD PlayCursor;
-                // DWORD WriteCursor;
-                // // NOTE: I think Casey is doing lots of placeholder code with variables
-                // // that don't exist, however they're named after things that should be there.
-                // //
-                // // *later* Okay he calls it "compression oriented programming"
-                // if(SUCCEEDED(GlobalSecondaryBuffer->GetCurrentPosition(&PlayCursor, &WriteCursor)))
-                // {
-                //     DWORD ByteToLock = RunningSampleIndex*BytesPerSample % SecondaryBufferSize;
-                //     DWORD BytesToWrite;
-                //     if(ByteToLock > PlayCursor)
-                //     {
-                //         BytesToWrite = SecondaryBufferSize - ByteToLock;
-                //         BytesToWrite += PlayCursor;
-                //     }
-                //     else
-                //     {
-                //         BytesToWrite = PlayCursor - ByteToLock;
-                //     }
+                // TODO: MAKE THIS SHIT WORK
+                DWORD PlayCursor;
+                DWORD WriteCursor;
+                // NOTE: I think Casey is doing lots of placeholder code with variables
+                // that don't exist, however they're named after things that should be there.
+                //
+                // *later* Okay he calls it "compression oriented programming"
+                if(SUCCEEDED(GlobalSecondaryBuffer->GetCurrentPosition(&PlayCursor, &WriteCursor)))
+                {
+                    DWORD ByteToLock = RunningSampleIndex*BytesPerSample % SecondaryBufferSize;
+                    DWORD BytesToWrite;
+                    if(ByteToLock > PlayCursor)
+                    {
+                        BytesToWrite = (SecondaryBufferSize - ByteToLock);
+                        BytesToWrite += PlayCursor;
+                    }
+                    else
+                    {
+                        BytesToWrite = PlayCursor - ByteToLock;
+                    }
 
-                //     VOID *Region1;
-                //     DWORD Region1Size;
-                //     VOID *Region2;
-                //     DWORD Region2Size;
+                    VOID *Region1;
+                    DWORD Region1Size;
+                    VOID *Region2;
+                    DWORD Region2Size;
 
-                //     if(SUCCEEDED(GlobalSecondaryBuffer->Lock(
-                //         ByteToLock, BytesToWrite,
-                //         &Region1, &Region1Size,
-                //         &Region2, &Region2Size,
-                //         0)))
-                //     {
+                    if(SUCCEEDED(GlobalSecondaryBuffer->Lock(
+                        ByteToLock, BytesToWrite,
+                        &Region1, &Region1Size,
+                        &Region2, &Region2Size,
+                        0)))
+                    {
 
-                //         DWORD Region1SampleCount = Region1Size/BytesPerSample;
-                //         int16 *SampleOut = (int16 *)Region1;
-                //         for(DWORD SampleIndex = 0; SampleIndex < Region1SampleCount;
-                //             SampleIndex++)
-                //         {
-                //             int16 SampleValue = ((RunningSampleIndex++ / HalfSquareWavePeriod) % 2) ?
-                //             16000 : -16000;
-                //             *SampleOut++ = SampleValue;
-                //             *SampleOut++ = SampleValue;
-                //         }
+                        DWORD Region1SampleCount = Region1Size/BytesPerSample;
+                        int16 *SampleOut = (int16 *)Region1;
+                        for(DWORD SampleIndex = 0; SampleIndex < Region1SampleCount;
+                            SampleIndex++)
+                        {
+                            int16 SampleValue = ((RunningSampleIndex++ % HalfSquareWavePeriod) % 2) ?
+                            16000 : -16000;
+                            *SampleOut++ = SampleValue;
+                            *SampleOut++ = SampleValue;
+                        }
 
-                //         DWORD Region2SampleCount = Region2Size/BytesPerSample;
-                //         SampleOut = (int16 *)Region2;
-                //         for(DWORD SampleIndex = 0; SampleIndex < Region2SampleCount;
-                //             SampleIndex++)
-                //         {
-                //             int16 SampleValue = ((RunningSampleIndex++ > HalfSquareWavePeriod) % 2)
-                //             ? 16000 : -16000;
-                //             *SampleOut++ = SampleValue;
-                //             *SampleOut++ = SampleValue;
-                //         }
-                //     }
+                        DWORD Region2SampleCount = Region2Size/BytesPerSample;
+                        SampleOut = (int16 *)Region2;
+                        for(DWORD SampleIndex = 0; SampleIndex < Region2SampleCount;
+                            SampleIndex++)
+                        {
+                            int16 SampleValue = ((RunningSampleIndex++ > HalfSquareWavePeriod) % 2)
+                            ? 16000 : -16000;
+                            *SampleOut++ = SampleValue;
+                            *SampleOut++ = SampleValue;
+                        }
+                    }
 
-                // }
+                }
 
-                HDC DeviceContext = GetDC(Window);
+                if(!SoundIsPlaying)
+                {
+                    GlobalSecondaryBuffer->Play(0, 0, DSBPLAY_LOOPING);
+                    SoundIsPlaying = true;
+                }
+
                 win32_window_dimension Dimension = Win32GetWindowDimension(Window);
                 Win32DisplayBufferInWindow(&GlobalBackBuffer, DeviceContext,
                     Dimension.Width, Dimension.Height);
-                ReleaseDC(Window, DeviceContext);
 
                 XOffset++;
             }
