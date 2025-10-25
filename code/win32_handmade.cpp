@@ -1,3 +1,4 @@
+#include <winbase.h>
 #include <windows.h>
 #include <stdint.h>
 #include <xinput.h>
@@ -260,7 +261,6 @@ Win32MainWindowCallback (HWND    Window,
 
     switch(Msg)
     {
-
         case WM_DESTROY:
     {
         Running = false;
@@ -336,7 +336,7 @@ Win32MainWindowCallback (HWND    Window,
 
         default:
         {
-            //      OutputDebugStringA("default\n");
+            // OutputDebugStringA("default\n");
             Result = DefWindowProc(Window, Msg, wParam, lParam);
         } break;
     }
