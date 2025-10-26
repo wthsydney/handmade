@@ -1,8 +1,8 @@
-#include <winbase.h>
 #include <windows.h>
 #include <stdint.h>
 #include <xinput.h>
 #include <dsound.h>
+#include <math.h>
 
 #define internal static
 #define local_persist static
@@ -18,6 +18,9 @@ typedef uint8_t uint8;
 typedef uint16_t uint16;
 typedef uint32_t uint32;
 typedef uint64_t uint64;
+
+typedef float real32;
+typedef double real64;
 
 struct win32_offscreen_buffer
 {
@@ -386,8 +389,8 @@ WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, PSTR CommandLine, int ShowCo
             int ToneHz = 256;
             int16 ToneVolume = 3000;
             uint32 RunningSampleIndex = 0;
-            int SquareWavePeriod = SamplesPerSecond/ToneHz;
-            int HalfSquareWavePeriod = SquareWavePeriod / 2;
+            int WavePeriod = SamplesPerSecond/ToneHz;
+            int HalfWavePeriod = WavePeriod / 2;
             int BytesPerSample = sizeof(int16)*2;
             int SecondaryBufferSize = SamplesPerSecond*BytesPerSample;
 
@@ -456,7 +459,6 @@ WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, PSTR CommandLine, int ShowCo
 
                 RenderCoolGradient(&GlobalBackBuffer, XOffset, YOffset);
 
-                // TODO: MAKE THIS SHIT WORK
                 DWORD PlayCursor;
                 DWORD WriteCursor;
                 // NOTE: I think Casey is doing lots of placeholder code with variables
@@ -467,7 +469,12 @@ WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, PSTR CommandLine, int ShowCo
                 {
                     DWORD ByteToLock = RunningSampleIndex*BytesPerSample % SecondaryBufferSize;
                     DWORD BytesToWrite;
-                    if(ByteToLock > PlayCursor)
+                    // TODO(casey): We need a more accurate check ByteToLock == PlayCursor
+                    if(ByteToLock == PlayCursor)
+                    {
+                        BytesToWrite = SecondaryBufferSize;
+                    }
+                    else if(ByteToLock > PlayCursor)
                     {
                         BytesToWrite = (SecondaryBufferSize - ByteToLock);
                         BytesToWrite += PlayCursor;
@@ -494,7 +501,10 @@ WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, PSTR CommandLine, int ShowCo
                         for(DWORD SampleIndex = 0; SampleIndex < Region1SampleCount;
                             SampleIndex++)
                         {
-                            int16 SampleValue = ((RunningSampleIndex++ % HalfSquareWavePeriod) % 2)
+                            real32 SineValue = 0;
+                            // Sine wave
+                            // int16 SampleValue = ????;
+                            int16 SampleValue = ((RunningSampleIndex++ % HalfWavePeriod) % 2)
                             ? ToneVolume : -ToneVolume;
                             *SampleOut++ = SampleValue;
                             *SampleOut++ = SampleValue;
@@ -505,7 +515,7 @@ WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, PSTR CommandLine, int ShowCo
                         for(DWORD SampleIndex = 0; SampleIndex < Region2SampleCount;
                             SampleIndex++)
                         {
-                            int16 SampleValue = ((RunningSampleIndex++ > HalfSquareWavePeriod) % 2)
+                            int16 SampleValue = ((RunningSampleIndex++ > HalfWavePeriod) % 2)
                             ? ToneVolume : -ToneVolume;
                             *SampleOut++ = SampleValue;
                             *SampleOut++ = SampleValue;
@@ -534,7 +544,7 @@ WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, PSTR CommandLine, int ShowCo
             // TODO(casey): Logging
         }
 
-        return 0;
-
     }
+
+    return 0;
 }
