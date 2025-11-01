@@ -1,5 +1,6 @@
 #include <windows.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <xinput.h>
 #include <dsound.h>
 #include <math.h>
@@ -414,6 +415,10 @@ Win32FillSoundBuffer(win32_sound_output *SoundOutput, DWORD ByteToLock, DWORD By
 int CALLBACK
 WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, PSTR CommandLine, int ShowCode)
 {
+    LARGE_INTEGER PerfCountFrequencyResult;
+    QueryPerformanceFrequency(&PerfCountFrequencyResult);
+    int64 PerfCountFrequency = PerfCountFrequencyResult.QuadPart;
+
     Win32LoadXInput();
     WNDCLASSA WindowClass = {};
 
@@ -453,9 +458,9 @@ WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, PSTR CommandLine, int ShowCo
             SoundOutput.SamplesPerSecond = 48000;
             SoundOutput.ToneHz = 256;
             SoundOutput.ToneVolume = 3000;
-            SoundOutput.RunningSampleIndex = 0;
+            // SoundOutput.RunningSampleIndex = 0;
             SoundOutput.WavePeriod = SoundOutput.SamplesPerSecond/SoundOutput.ToneHz;
-            SoundOutput.HalfWavePeriod = SoundOutput.WavePeriod / 2;
+            // SoundOutput.HalfWavePeriod = SoundOutput.WavePeriod / 2;
             SoundOutput.BytesPerSample = sizeof(int16)*2;
             SoundOutput.SecondaryBufferSize = SoundOutput.SamplesPerSecond*SoundOutput.BytesPerSample;
             SoundOutput.LatencySampleCount = SoundOutput.SamplesPerSecond / 15;
@@ -463,9 +468,15 @@ WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, PSTR CommandLine, int ShowCo
             Win32FillSoundBuffer(&SoundOutput, 0, SoundOutput.LatencySampleCount*SoundOutput.BytesPerSample);
             GlobalSecondaryBuffer->Play(0, 0, DSBPLAY_LOOPING);
 
+            LARGE_INTEGER LastCounter;
+            QueryPerformanceCounter(&LastCounter);
+
+            int64 LastCycleCount = __rdtsc();
             Running = true;
             while(Running)
             {
+                LARGE_INTEGER BeginCounter;
+                QueryPerformanceCounter(&BeginCounter);
                 MSG Message;
                 while(PeekMessageA(&Message, 0, 0, 0, PM_REMOVE))
                 {
@@ -563,6 +574,25 @@ WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, PSTR CommandLine, int ShowCo
                 Win32DisplayBufferInWindow(&GlobalBackBuffer, DeviceContext,
                     Dimension.Width, Dimension.Height);
 
+                int64 EndCycleCount = __rdtsc();
+                LARGE_INTEGER EndCounter;
+                QueryPerformanceCounter(&EndCounter);
+
+                // TODO: Display the value here
+                int64 CyclesElapsed = EndCycleCount - LastCycleCount;
+                int64 CounterElapsed =  EndCounter.QuadPart - LastCounter.QuadPart;
+                real32 MSPerFrame = (real32)(((1000.0f*CounterElapsed) / PerfCountFrequency));
+                real32 FPS = (real32)PerfCountFrequency / (real32)CounterElapsed;
+                real32 MCPF = ((real32)CyclesElapsed / (1000 * 1000));
+
+                // NOTE(patryk): Casey says that he's never
+                // shipping code like this in the final product.
+                char Buffer[256];
+                sprintf(Buffer, "%.2fms/f, %.2fFPS, %.2fmc/f\n", MSPerFrame, FPS, MCPF);
+                OutputDebugStringA(Buffer);
+
+                LastCounter = EndCounter;
+                LastCycleCount = EndCycleCount;
                 XOffset++;
             }
 
