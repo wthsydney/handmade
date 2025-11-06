@@ -1,3 +1,24 @@
+/* TODO: This is not a final platform layer
+
+   - Saved game locations
+   - Getting a handle to our own executable file
+   - Asset loading path
+   - Threading (launch a thread)
+   - Raw Input (support for multiple keyboards)
+   - Sleep/timeBeginPeriod
+   - ClipCursor() (for multimonitor support)
+   - Fullscreen support
+   - WM_SETCURSOR (control cursor visibility)
+   - QueryCancelAutoplay
+   - WM_ACTIVATEAPP
+   - Blit speed improvements (BitBlt)
+   - Hardware acceleration (OpelGL or Direct3D or both)
+   - GetKeyboardLayout (French keyboards, international WASD support)
+
+   Just a partial list of stuff.
+
+*/
+
 #include <windows.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -24,6 +45,11 @@ typedef uint64_t uint64;
 
 typedef float real32;
 typedef double real64;
+
+// NOTE(patryk): Okay I just found out that the order you have your #include in
+// MATTERS A LOT. I just spent 5 minutes figuring out why I can't compile.
+#include "handmade.cpp"
+#include "handmade.h"
 
 struct win32_offscreen_buffer
 {
@@ -185,30 +211,6 @@ Win32GetWindowDimension(HWND Window)
     Result.Height = ClientRect.bottom - ClientRect.top;
 
     return(Result);
-}
-
-internal void
-RenderCoolGradient(win32_offscreen_buffer *Buffer, int XOffset, int YOffset)
-{
-    uint8 *Row = (uint8 *)Buffer->Memory;
-    for (int Y = 0; Y < Buffer->Height; Y++)
-    {
-        uint32 *Pixel = (uint32 *)Row;
-        for (int X = 0; X < Buffer->Width; X++)
-        {
-            // Pixel in memory: 00 00 00 00
-            //                  RR GG BB xx
-            // 0x xxBBGGRR
-            // Little endian architecture?
-
-            uint8 Blue = (X + XOffset);
-            uint8 Green = (Y + YOffset);
-
-            *Pixel++ = ((Green << 8) | Blue);
-        }
-
-        Row += Buffer->Pitch;
-    }
 }
 
 // DIB - Device independent bitmap
@@ -420,6 +422,7 @@ WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, PSTR CommandLine, int ShowCo
     int64 PerfCountFrequency = PerfCountFrequencyResult.QuadPart;
 
     Win32LoadXInput();
+
     WNDCLASSA WindowClass = {};
 
     Win32ResizeDIBSection(&GlobalBackBuffer, 1280, 720);
@@ -534,7 +537,13 @@ WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, PSTR CommandLine, int ShowCo
                 // XINPUT_VIBRATION Vibration;
                 // XInputSetState(0, &Vibration);
 
-                RenderCoolGradient(&GlobalBackBuffer, XOffset, YOffset);
+		game_offscreen_buffer Buffer = {};
+		Buffer.Memory = GlobalBackBuffer.Memory;
+		Buffer.Width = GlobalBackBuffer.Width;
+		Buffer.Height = GlobalBackBuffer.Height;
+		Buffer.Pitch = GlobalBackBuffer.Pitch;
+		GameUpdateAndRender(&Buffer, XOffset, YOffset);
+                // RenderCoolGradient(&GlobalBackBuffer, XOffset, YOffset);
 
                 DWORD PlayCursor;
                 DWORD WriteCursor;
@@ -578,6 +587,7 @@ WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, PSTR CommandLine, int ShowCo
                 LARGE_INTEGER EndCounter;
                 QueryPerformanceCounter(&EndCounter);
 
+
                 // TODO: Display the value here
                 int64 CyclesElapsed = EndCycleCount - LastCycleCount;
                 int64 CounterElapsed =  EndCounter.QuadPart - LastCounter.QuadPart;
@@ -587,9 +597,13 @@ WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, PSTR CommandLine, int ShowCo
 
                 // NOTE(patryk): Casey says that he's never
                 // shipping code like this in the final product.
+		#if 0
+		
                 char Buffer[256];
                 sprintf(Buffer, "%.2fms/f, %.2fFPS, %.2fmc/f\n", MSPerFrame, FPS, MCPF);
                 OutputDebugStringA(Buffer);
+		
+		#endif
 
                 LastCounter = EndCounter;
                 LastCycleCount = EndCycleCount;
