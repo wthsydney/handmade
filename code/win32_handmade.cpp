@@ -48,8 +48,8 @@ typedef double real64;
 
 // NOTE(patryk): Okay I just found out that the order you have your #include in
 // MATTERS A LOT. I just spent 5 minutes figuring out why I can't compile.
-#include "handmade.cpp"
 #include "handmade.h"
+#include "handmade.cpp"
 
 struct win32_offscreen_buffer
 {
@@ -367,7 +367,21 @@ struct win32_sound_output
 };
 
 void
-Win32FillSoundBuffer(win32_sound_output *SoundOutput, DWORD ByteToLock, DWORD BytesToWrite)
+Win32ClearBuffer(win32_sound_output *SoundOutput, DWORD ByteToLock, DWORD BytesToWrite,
+		 game_sound_output_buffer *SourceBuffer)
+{
+    if(SUCCEEDED(GlobalSecondaryBuffer->Lock(ByteToLock, BytesToWrite,
+					     &Region1, &Region1Size,
+					     &Region2, &Region2Size,
+					     0)))
+    {
+	
+    }
+}
+
+void
+Win32FillSoundBuffer(win32_sound_output *SoundOutput, DWORD ByteToLock, DWORD BytesToWrite,
+		     game_sound_output_buffer *SourceBuffer)
 {
 
     VOID *Region1;
@@ -375,39 +389,31 @@ Win32FillSoundBuffer(win32_sound_output *SoundOutput, DWORD ByteToLock, DWORD By
     VOID *Region2;
     DWORD Region2Size;
 
-    if(SUCCEEDED(GlobalSecondaryBuffer->Lock(
-        ByteToLock, BytesToWrite,
-        &Region1, &Region1Size,
-        &Region2, &Region2Size,
-        0)))
+    if(SUCCEEDED(GlobalSecondaryBuffer->Lock(ByteToLock, BytesToWrite,
+					     &Region1, &Region1Size,
+					     &Region2, &Region2Size,
+					     0)))
     {
 
         DWORD Region1SampleCount = Region1Size/SoundOutput->BytesPerSample;
-        int16 *SampleOut = (int16 *)Region1;
+        int16 *DestSample = (int16 *)Region1;
+	int16 *SourceSample = SourceBuffer->Samples;
         for(DWORD SampleIndex = 0; SampleIndex < Region1SampleCount;
             SampleIndex++)
         {
-            real32 SineValue = sinf(SoundOutput->tSine);
-            int16 SampleValue = (int16)(SineValue * SoundOutput->ToneVolume);
-            *SampleOut++ = SampleValue;
-            *SampleOut++ = SampleValue;
-
-            SoundOutput->tSine += 2.0f*Pi32*1.0f/(real32)SoundOutput->WavePeriod;
+            *DestSample++ = *SourceSample++;
+            *DestSample++ = *SourceSample++;
             SoundOutput->RunningSampleIndex++;
         }
 
         DWORD Region2SampleCount = Region2Size/SoundOutput->BytesPerSample;
-        SampleOut = (int16 *)Region2;
+        DestSample = (int16 *)Region2;
         for(DWORD SampleIndex = 0; SampleIndex < Region2SampleCount;
             SampleIndex++)
         {
-            real32 SineValue = sinf(SoundOutput->tSine);;
-            int16 SampleValue = (int16)(SineValue * SoundOutput->ToneVolume);
-            *SampleOut++ = SampleValue;
-            *SampleOut++ = SampleValue;
-
-            SoundOutput->tSine += 2.0f*Pi32*1.0f/(real32)SoundOutput->WavePeriod;
-            SoundOutput->RunningSampleIndex++;
+	    *DestSample++ = *SourceSample++;
+            *DestSample++ = *SourceSample++;
+            ++SoundOutput->RunningSampleIndex;
         }
 
         GlobalSecondaryBuffer->Unlock(Region1, Region1Size, Region2, Region2Size);
@@ -461,14 +467,12 @@ WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, PSTR CommandLine, int ShowCo
             SoundOutput.SamplesPerSecond = 48000;
             SoundOutput.ToneHz = 256;
             SoundOutput.ToneVolume = 3000;
-            // SoundOutput.RunningSampleIndex = 0;
             SoundOutput.WavePeriod = SoundOutput.SamplesPerSecond/SoundOutput.ToneHz;
-            // SoundOutput.HalfWavePeriod = SoundOutput.WavePeriod / 2;
             SoundOutput.BytesPerSample = sizeof(int16)*2;
             SoundOutput.SecondaryBufferSize = SoundOutput.SamplesPerSecond*SoundOutput.BytesPerSample;
             SoundOutput.LatencySampleCount = SoundOutput.SamplesPerSecond / 15;
             Win32InitSound(Window, SoundOutput.SamplesPerSecond, SoundOutput.SecondaryBufferSize);
-            Win32FillSoundBuffer(&SoundOutput, 0, SoundOutput.LatencySampleCount*SoundOutput.BytesPerSample);
+            Win32ClearBuffer(&SoundOutput, 0, SoundOutput.LatencySampleCount*SoundOutput.BytesPerSample);
             GlobalSecondaryBuffer->Play(0, 0, DSBPLAY_LOOPING);
 
             LARGE_INTEGER LastCounter;
@@ -520,11 +524,11 @@ WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, PSTR CommandLine, int ShowCo
                         int16 StickX = Pad->sThumbLX;
                         int16 StickY = Pad->sThumbLY;
 
-                        // NOTE(Patryk): This is just for fun, remove it later
-                        if(AButton)
-                        {
-                            YOffset++;
-                        }
+			// NOTE(patryk): This is for fun
+			if(Up) YOffset--;
+			if(Down) YOffset++;
+			if(Left) XOffset--;
+			if(Right) XOffset++;
 
                     }
                     else
@@ -537,12 +541,18 @@ WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, PSTR CommandLine, int ShowCo
                 // XINPUT_VIBRATION Vibration;
                 // XInputSetState(0, &Vibration);
 
+		int16 Samples[(48000/30) * 2];
+		game_sound_output_buffer SoundBuffer = {};
+		SoundBuffer.SamplesPerSecond = SoundOutput.SamplesPerSecond = 48000;
+		SoundBuffer.SampleCount = SoundBuffer.SamplesPerSecond/30;
+		SoundBuffer.Samples = Samples;
+		
 		game_offscreen_buffer Buffer = {};
 		Buffer.Memory = GlobalBackBuffer.Memory;
 		Buffer.Width = GlobalBackBuffer.Width;
 		Buffer.Height = GlobalBackBuffer.Height;
 		Buffer.Pitch = GlobalBackBuffer.Pitch;
-		GameUpdateAndRender(&Buffer, XOffset, YOffset);
+		GameUpdateAndRender(&Buffer, XOffset, YOffset, &SoundBuffer);
                 // RenderCoolGradient(&GlobalBackBuffer, XOffset, YOffset);
 
                 DWORD PlayCursor;
@@ -554,6 +564,7 @@ WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, PSTR CommandLine, int ShowCo
                 if(SUCCEEDED(GlobalSecondaryBuffer->GetCurrentPosition(&PlayCursor, &WriteCursor)))
                 {
                     // TODO(casey): We need a more accurate check ByteToLock == PlayCursor
+		    // Done?
                     DWORD ByteToLock = ((SoundOutput.RunningSampleIndex*SoundOutput.BytesPerSample) %
                                         SoundOutput.SecondaryBufferSize);
 
@@ -607,7 +618,6 @@ WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, PSTR CommandLine, int ShowCo
 
                 LastCounter = EndCounter;
                 LastCycleCount = EndCycleCount;
-                XOffset++;
             }
 
         }
